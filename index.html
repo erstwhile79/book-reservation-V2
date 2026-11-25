@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>우리 반 작은 도서관 | 학급문고 예약</title>
+  <!-- 아래 두 값만 자신의 Supabase 프로젝트 정보로 바꾸세요. -->
+  <script>
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY";
+  </script>
+  <!-- Supabase JavaScript v2 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { color-scheme: light; --ink:#263d35; --muted:#53645b; --green:#27634c; --line:#dbe7dd; --cream:#fffaf0; --white:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f6f8ee; color:var(--ink); font: 17px/1.6 "Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif; word-break:keep-all; overflow-wrap:anywhere; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; font-weight:750; }
+    button:disabled, input:disabled, select:disabled { opacity:.55; cursor:not-allowed; }
+    :focus-visible { outline:3px solid #b37519; outline-offset:3px; }
+    .wrap { max-width:1100px; margin:auto; padding:0 22px; }
+    header { background:#e6f0dc; border-bottom:1px solid #d6e4cf; }
+    .hero { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-top:35px; padding-bottom:35px; }
+    .eyebrow { font-size:14px; font-weight:800; letter-spacing:.08em; color:var(--green); margin:0 0 4px; }
+    h1 { font-size:clamp(29px,5vw,43px); line-height:1.22; letter-spacing:-.045em; margin:0 0 9px; }
+    h2 { font-size:24px; letter-spacing:-.025em; line-height:1.35; margin:0; }
+    p { margin:0; }
+    .muted { color:var(--muted); font-size:15px; }
+    .hero p:last-child { color:#415a48; }
+    .hero-art { width:155px; flex:none; }
+    main { padding-top:24px!important; padding-bottom:42px!important; }
+    .toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+    #connection { color:var(--muted); font-size:15px; font-weight:650; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:20px; }
+    .stat { background:white; border:1px solid var(--line); border-radius:18px; padding:15px 19px; }
+    .stat span { display:block; font-size:15px; color:var(--muted); }
+    .stat strong { display:block; font-size:30px; font-variant-numeric:tabular-nums; line-height:1.3; }
+    .stat:nth-child(2) { background:#eaf5e6; }
+    .stat:nth-child(3) { background:#fff2d9; }
+    .top-grid { display:grid; grid-template-columns:minmax(0, .9fr) minmax(0,1.1fr); gap:20px; align-items:start; }
+    .panel { background:white; border:1px solid var(--line); border-radius:22px; padding:23px; box-shadow:0 4px 14px #344c3510; min-width:0; }
+    .section-head { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+    .step { flex:none; background:#e6f0dc; border-radius:10px; padding:3px 9px; font-weight:800; color:var(--green); font-size:15px; }
+    form { display:grid; gap:14px; margin-top:19px; }
+    label { display:block; font-weight:750; margin-bottom:5px; }
+    input,select { display:block; width:100%; min-width:0; min-height:49px; padding:10px 12px; border:1.5px solid #b9cbbf; border-radius:11px; background:#fff; color:var(--ink); }
+    .form-row { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:12px; }
+    .help { display:block; margin-top:4px; font-size:14px; color:var(--muted); }
+    .primary,.secondary,.small { min-height:46px; padding:9px 16px; border-radius:11px; border:1px solid transparent; }
+    .primary { background:var(--green); color:white; }
+    .primary:not(:disabled):hover { background:#194b37; }
+    .secondary { background:white; border-color:#a9c3b0; color:var(--green); }
+    .secondary:not(:disabled):hover { background:#eef6e9; }
+    .submit { min-height:54px; font-size:20px; margin-top:3px; }
+    .notice { padding:13px 16px; border:1px solid #e6c78c; background:#fff3d9; color:#6b4612; border-radius:12px; margin:0 0 17px; font-size:16px; }
+    .notice[data-kind="error"] { background:#fff0ed; border-color:#efc5bc; color:#942e24; }
+    .notice[data-kind="success"] { background:#e8f5e6; border-color:#b6d6b1; color:#225a38; }
+    [hidden] { display:none!important; }
+    .book-list { display:grid; gap:9px; list-style:none; padding:0; margin:16px 0 0; max-height:480px; overflow-y:auto; }
+    .book { display:flex; align-items:center; gap:11px; padding:11px; border:1px solid #e1e9df; border-radius:13px; background:#fcfdf9; }
+    .book-icon { display:grid; place-items:center; width:39px; height:45px; background:#f2e0ac; color:#78551e; border-radius:6px 9px 9px 6px; border-left:5px solid #d0a44e; font-size:21px; flex:none; }
+    .book:nth-child(3n+2) .book-icon { background:#dcead8; color:#37634d; border-color:#79a887; }
+    .book:nth-child(3n) .book-icon { background:#f6dcd4; color:#9d5549; border-color:#ce9488; }
+    .book-info { flex:1; min-width:0; }
+    .book-title { font-weight:800; line-height:1.4; }
+    .status { font-size:14px; font-weight:750; display:block; color:#27634c; }
+    .status.taken { color:#885511; }
+    .small { font-size:15px; padding:7px 12px; min-height:44px; white-space:nowrap; }
+    .small.choose { background:#e7f2e3; color:#205b40; border-color:#c7dfc5; }
+    .small.cancel { background:#fff2ef; border-color:#edc9c2; color:#98382e; }
+    .reservations { margin-top:20px; }
+    .search-row { display:flex; align-items:end; gap:10px; margin:17px 0 10px; }
+    .search-row > div { flex:1; min-width:0; }
+    .search-row label { font-size:15px; }
+    .results-info { margin:7px 0 10px; }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; text-align:left; font-size:16px; }
+    th { background:#eef4e8; color:#365342; font-size:14px; }
+    th,td { padding:13px 10px; border-bottom:1px solid #e5ece2; vertical-align:middle; }
+    th:first-child { border-radius:9px 0 0 9px; }
+    th:last-child { border-radius:0 9px 9px 0; }
+    td:first-child { font-weight:750; }
+    .date { white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .empty { padding:25px 12px; text-align:center; color:var(--muted); border:1px dashed #cbd9c9; border-radius:13px; }
+    footer { font-size:14px; color:#59695c; text-align:center; padding:0 20px 28px; }
+    @media(max-width:760px) { .top-grid { grid-template-columns:1fr; } .hero-art { width:100px; } .wrap { padding-left:15px; padding-right:15px; } .panel { padding:18px; } .hero { padding-top:25px; padding-bottom:25px; } .stat { padding:12px; } .stat span { font-size:13px; } .stat strong { font-size:25px; } }
+    @media(max-width:540px) { .hero-art { width:76px; } .hero { gap:10px; } .stats { gap:7px; } .form-row { grid-template-columns:1fr; } .search-row { align-items:stretch; flex-wrap:wrap; } .search-row > div { flex-basis:100%; } .search-row button { margin-left:auto; } .table-wrap { overflow:visible; } table,tbody,tr,td { display:block; width:100%; } thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); } tbody { display:grid; gap:10px; } tbody tr { border:1px solid var(--line); border-radius:12px; padding:12px; } td { display:flex; justify-content:space-between; gap:12px; border:0; padding:5px 0; text-align:right; } td::before { content:attr(data-label); color:var(--muted); font-size:14px; font-weight:600; flex:none; text-align:left; } td:last-child { justify-content:flex-end; } td:last-child::before { content:none; } .date { white-space:normal; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap hero">
+    <div><p class="eyebrow">우리 반 학급문고</p><h1>우리 반 작은 도서관</h1><p>읽고 싶은 책을 골라 예약해요!</p></div>
+    <svg class="hero-art" viewBox="0 0 170 118" aria-hidden="true"><rect x="5" y="99" width="160" height="9" rx="4.5" fill="#8f6749"/><rect x="18" y="31" width="29" height="68" rx="5" fill="#e7b76a"/><path d="M24 41h17M24 89h17" stroke="#9b692b" stroke-width="3" stroke-linecap="round"/><rect x="50" y="13" width="31" height="86" rx="5" fill="#6d9e7e"/><rect x="56" y="30" width="19" height="28" rx="4" fill="#dff0da"/><path d="M62 79h7" stroke="#dff0da" stroke-width="3" stroke-linecap="round"/><rect x="84" y="37" width="24" height="62" rx="4" fill="#d48f7e"/><path d="M90 47h12M90 89h12" stroke="#fbe7dd" stroke-width="3" stroke-linecap="round"/><g transform="rotate(-14 119 96)"><rect x="115" y="22" width="29" height="77" rx="5" fill="#e0cf91"/><path d="M122 35h15M122 86h15" stroke="#9a823e" stroke-width="3" stroke-linecap="round"/></g><path d="M151 10v16M143 18h16" stroke="#b99043" stroke-width="3" stroke-linecap="round"/></svg>
+  </div>
+</header>
+<main class="wrap">
+  <div class="toolbar"><span id="connection" role="status">연결 확인 중…</span><button type="button" class="secondary" id="refresh">↻ 새로고침</button></div>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <div class="stats" aria-label="학급문고 요약">
+    <div class="stat"><span>전체 책</span><strong id="total">–</strong></div>
+    <div class="stat"><span>예약 가능</span><strong id="available">–</strong></div>
+    <div class="stat"><span>예약 중</span><strong id="reserved">–</strong></div>
+  </div>
+  <div class="top-grid">
+    <section class="panel" aria-labelledby="book-heading">
+      <div class="section-head"><span class="step">1</span><h2 id="book-heading">읽고 싶은 책 찾기</h2></div>
+      <p class="muted">예약 가능한 책의 ‘선택’ 버튼을 눌러요.</p>
+      <div style="margin-top:14px"><label for="book-search">책 제목 찾기</label><input type="search" id="book-search" placeholder="책 제목을 입력해요"></div>
+      <ul class="book-list" id="book-list"></ul>
+      <p class="empty" id="book-empty">책 목록을 불러오는 중이에요.</p>
+    </section>
+    <section class="panel" aria-labelledby="form-heading">
+      <div class="section-head"><span class="step">2</span><h2 id="form-heading">책 예약하기</h2></div>
+      <p class="muted">책과 날짜, 기간, 나의 별명을 입력해요.</p>
+      <form id="reservation-form">
+        <div><label for="book-id">예약할 책</label><select id="book-id" required disabled><option value="">책을 선택해요</option></select></div>
+        <div class="form-row">
+          <div><label for="reservation-date">예약 날짜</label><input type="date" id="reservation-date" required></div>
+          <div><label for="duration">예약 기간 (일)</label><input type="number" id="duration" min="1" max="365" step="1" value="7" inputmode="numeric" required></div>
+        </div>
+        <div><label for="nickname">나의 별명</label><input type="text" id="nickname" placeholder="예: 책토끼" maxlength="30" autocomplete="off" required><span class="help">진짜 이름 대신 별명을 써요.</span></div>
+        <p id="end-preview" class="help" aria-live="polite"></p>
+        <button type="submit" id="submit" class="primary submit" disabled>예약하기</button>
+      </form>
+    </section>
+  </div>
+  <section class="panel reservations" aria-labelledby="reservations-heading">
+    <div class="section-head"><span class="step">3</span><h2 id="reservations-heading">우리 반 예약 현황</h2></div>
+    <p class="muted">어떤 책이 예약되어 있는지 확인해요.</p>
+    <div class="search-row">
+      <div><label for="filter-book">책 이름</label><input type="search" id="filter-book" placeholder="책 이름으로 찾기"></div>
+      <div><label for="filter-nickname">예약자 별명</label><input type="search" id="filter-nickname" placeholder="별명으로 찾기"></div>
+      <button type="button" class="secondary" id="clear-search">검색 초기화</button>
+    </div>
+    <p id="results-info" class="muted results-info" aria-live="polite"></p>
+    <div class="table-wrap" id="table-wrap" hidden>
+      <table><thead><tr><th scope="col">책 이름</th><th scope="col">예약자 별명</th><th scope="col">예약 날짜</th><th scope="col">기간</th><th scope="col">예약 종료일</th><th scope="col">취소</th></tr></thead><tbody id="reservation-list"></tbody></table>
+    </div>
+    <p id="reservation-empty" class="empty">예약 현황을 불러오는 중이에요.</p>
+    <p class="help" style="margin-top:14px">예약한 날부터 기간을 세어요. 예약 기간이 지나도 자동 취소되지는 않아요. 책을 다 읽으면 예약을 취소해 주세요.</p>
+  </section>
+</main>
+<footer>소중한 책을 함께 읽고 아껴요. · 별명만 사용하고 친구의 예약은 함부로 취소하지 않아요.</footer>
+<script>
+  'use strict';
+  // 앞서 만든 SQL의 books(id, name), reservations(id, book_id, reservation_date, duration, student_name, created_at)를 사용합니다.
+  const $ = id => document.getElementById(id);
+  let db = null, books = [], reservations = [], loaded = false, busy = false;
+  const form = $('reservation-form');
+  const bookSelect = $('book-id');
+  const dateInput = $('reservation-date');
+  const durationInput = $('duration');
+  // 한국 날짜 기준의 오늘을 기본값으로 표시합니다.
+  function today() {
+    const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const p = Object.fromEntries(parts.map(x=>[x.type,x.value]));
+    return `${p.year}-${p.month}-${p.day}`;
+  }
+  // 시작 날짜를 첫째 날로 계산합니다. 예: 11월 25일부터 3일이면 11월 27일까지.
+  function endDate(start, days) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !Number.isInteger(Number(days)) || Number(days)<1) return '';
+    const d = new Date(start+'T00:00:00Z');
+    if (!Number.isFinite(d.getTime())) return '';
+    d.setUTCDate(d.getUTCDate()+Number(days)-1);
+    return Number.isFinite(d.getTime()) ? d.toISOString().split('T')[0] : '';
+  }
+  function previewEnd() {
+    const end = endDate(dateInput.value, durationInput.value);
+    $('end-preview').textContent = end ? `예약 종료일: ${end}` : '날짜와 기간을 입력해요.';
+  }
+  function notice(message, kind='info') {
+    const el=$('notice'); el.textContent=message; el.dataset.kind=kind; el.hidden=!message;
+  }
+  function make(tag, text, cls) {
+    const el=document.createElement(tag); if(text!==undefined) el.textContent=text; if(cls) el.className=cls; return el;
+  }
+  const key = v=>String(v);
+  const norm = v=>String(v??'').trim().toLocaleLowerCase('ko');
+  const matches = (text,query)=>norm(text).includes(norm(query));
+  function reservedIds() { return new Set(reservations.map(r=>key(r.book_id))); }
+  function setBusy(value) { busy=value; syncControls(); }
+  function syncControls() {
+    const ready=!!db && loaded && !busy;
+    $('refresh').disabled=!db || busy;
+    bookSelect.disabled=!ready || bookSelect.options.length<=1;
+    $('submit').disabled=!ready || !bookSelect.value;
+    document.querySelectorAll('button[data-db-action]').forEach(b=>b.disabled=!ready);
+  }
+  // 한 번에 가져오는 행 수 제한에 대비하여 나누어 읽습니다.
+  async function readAll(table, columns) {
+    const rows=[]; let offset=0;
+    while(true) {
+      const {data,error}=await db.from(table).select(columns).order('id',{ascending:true}).range(offset,offset+499);
+      if(error) throw error;
+      if(!data || data.length===0) break;
+      rows.push(...data); offset+=data.length;
+    }
+    return rows;
+  }
+  function renderBooks() {
+    const taken=reservedIds();
+    const list=$('book-list'); list.replaceChildren();
+    const filtered=books.filter(b=>matches(b.name,$('book-search').value));
+    for(const b of filtered) {
+      const unavailable=taken.has(key(b.id));
+      const li=make('li',undefined,'book');
+      const icon=make('span','▤','book-icon'); icon.setAttribute('aria-hidden','true'); li.append(icon);
+      const info=make('div',undefined,'book-info');
+      info.append(make('div',b.name,'book-title'),make('span',unavailable?'예약 중':'예약 가능',unavailable?'status taken':'status'));
+      li.append(info);
+      if(!unavailable) {
+        const btn=make('button','선택','small choose'); btn.type='button'; btn.dataset.dbAction='choose'; btn.setAttribute('aria-label',`${b.name} 선택`);
+        btn.addEventListener('click',()=>{bookSelect.value=key(b.id);syncControls();bookSelect.focus();}); li.append(btn);
+      }
+      list.append(li);
+    }
+    $('book-empty').hidden=filtered.length>0;
+    $('book-empty').textContent=!loaded?'책 목록을 확인할 수 없어요.':books.length?'찾는 책이 없어요.':'아직 등록된 책이 없어요.';
+    syncControls();
+  }
+  function renderOptions() {
+    const previous=bookSelect.value, taken=reservedIds();
+    bookSelect.replaceChildren(new Option('책을 선택해요',''));
+    for(const b of books) if(!taken.has(key(b.id))) bookSelect.add(new Option(b.name,key(b.id)));
+    if([...bookSelect.options].some(o=>o.value===previous)) bookSelect.value=previous;
+    syncControls();
+  }
+  function renderReservations() {
+    const names=new Map(books.map(b=>[key(b.id),b.name]));
+    const filtered=reservations.filter(r=>matches(names.get(key(r.book_id))??'', $('filter-book').value) && matches(r.student_name,$('filter-nickname').value))
+      .sort((a,b)=>String(a.reservation_date).localeCompare(String(b.reservation_date)) || String(a.id).localeCompare(String(b.id),undefined,{numeric:true}));
+    const tbody=$('reservation-list'); tbody.replaceChildren();
+    for(const r of filtered) {
+      const name=names.get(key(r.book_id))??'알 수 없는 책';
+      const tr=make('tr');
+      const fields=[['책 이름',name],['예약자 별명',r.student_name],['예약 날짜',r.reservation_date],['기간',`${r.duration}일`],['예약 종료일',endDate(r.reservation_date,r.duration)]];
+      for(const [label,value] of fields) { const td=make('td',value,label.includes('날짜')||label.includes('종료일')?'date':undefined); td.dataset.label=label; tr.append(td); }
+      const td=make('td'); td.dataset.label='취소'; const btn=make('button','취소','small cancel'); btn.type='button'; btn.dataset.dbAction='cancel'; btn.setAttribute('aria-label',`${name} 예약 취소`);
+      btn.addEventListener('click',()=>cancelReservation(r,name)); td.append(btn); tr.append(td); tbody.append(tr);
+    }
+    $('table-wrap').hidden=filtered.length===0;
+    $('reservation-empty').hidden=filtered.length>0;
+    $('reservation-empty').textContent=!loaded?'예약 현황을 확인할 수 없어요.':reservations.length?'검색 조건에 맞는 예약이 없어요.':'아직 예약된 책이 없어요.';
+    $('results-info').textContent=loaded?`예약 ${filtered.length}건${filtered.length!==reservations.length?` / 전체 ${reservations.length}건`:''}`:'';
+    syncControls();
+  }
+  function renderAll() {
+    const taken=reservedIds();
+    $('total').textContent=loaded?books.length+'권':'–';
+    $('available').textContent=loaded?books.filter(b=>!taken.has(key(b.id))).length+'권':'–';
+    $('reserved').textContent=loaded?books.filter(b=>taken.has(key(b.id))).length+'권':'–';
+    renderOptions(); renderBooks(); renderReservations();
+  }
+  async function loadData() {
+    $('connection').textContent='책과 예약을 불러오는 중…';
+    try {
+      const [b,r]=await Promise.all([readAll('books','id,name'),readAll('reservations','id,book_id,reservation_date,duration,student_name,created_at')]);
+      books=b.sort((a,b)=>a.name.localeCompare(b.name,'ko')); reservations=r; loaded=true;
+      $('connection').textContent='● 도서관 연결 완료'; renderAll(); return true;
+    } catch(error) {
+      console.error('목록 조회 실패:',error); loaded=false; books=[]; reservations=[]; renderAll();
+      $('connection').textContent='연결 또는 조회 실패'; return false;
+    }
+  }
+  async function refresh() {
+    if(!db || busy) return;
+    setBusy(true); notice('');
+    try { if(!await loadData()) notice('책 목록을 불러오지 못했어요. 인터넷 연결과 Supabase 설정을 확인해 주세요.','error'); }
+    finally { setBusy(false); }
+  }
+  form.addEventListener('submit',async event=>{
+    event.preventDefault(); if(!db || !loaded || busy || !form.reportValidity()) return;
+    const bookId=bookSelect.value, nickname=$('nickname').value.trim(), days=Number(durationInput.value);
+    if(!bookId || !nickname || !dateInput.value || !Number.isInteger(days) || days<1 || days>365) { notice('책, 날짜, 기간, 별명을 바르게 입력해 주세요.','error'); return; }
+    setBusy(true); notice('예약하고 있어요…');
+    try {
+      const {error}=await db.from('reservations').insert({book_id:bookId,reservation_date:dateInput.value,duration:days,student_name:nickname});
+      if(error) throw error;
+      form.reset(); dateInput.value=today(); previewEnd();
+      const refreshed=await loadData();
+      notice(refreshed?'예약이 완료되었어요! 즐겁게 책을 읽어요.':'예약은 완료되었지만 목록을 불러오지 못했어요. 새로고침해 주세요.',refreshed?'success':'info');
+    } catch(error) {
+      console.error('예약 실패:',error);
+      if(error?.code==='23505') {
+        const refreshed=await loadData();
+        notice('이미 예약된 책입니다.'+(refreshed?'':' 목록을 불러오지 못했어요. 새로고침해 주세요.'),'error');
+        window.alert('이미 예약된 책입니다.');
+      } else notice('예약하지 못했어요. 인터넷 연결이나 입력 내용을 확인하고 새로고침해 주세요.','error');
+    } finally { setBusy(false); }
+  });
+  async function cancelReservation(r,name) {
+    if(!db || !loaded || busy) return;
+    if(!window.confirm(`‘${name}’의 예약을 취소할까요?\n내 예약인지 먼저 확인해 주세요.`)) return;
+    setBusy(true); notice('예약을 취소하고 있어요…');
+    try {
+      const {data,error}=await db.from('reservations').delete().eq('id',r.id).select('id');
+      if(error) throw error;
+      const refreshed=await loadData();
+      notice((data?.length?'예약을 취소했어요.':'이미 취소된 예약이에요.')+(refreshed?'':' 목록을 불러오지 못했어요. 새로고침해 주세요.'),refreshed?'success':'info');
+    } catch(error) { console.error('취소 실패:',error); notice('예약을 취소하지 못했어요. 새로고침 후 다시 시도해 주세요.','error'); }
+    finally { setBusy(false); }
+  }
+  $('book-search').addEventListener('input',renderBooks);
+  $('filter-book').addEventListener('input',renderReservations);
+  $('filter-nickname').addEventListener('input',renderReservations);
+  $('clear-search').addEventListener('click',()=>{$('filter-book').value='';$('filter-nickname').value='';renderReservations();});
+  $('refresh').addEventListener('click',refresh);
+  bookSelect.addEventListener('change',syncControls);
+  dateInput.addEventListener('input',previewEnd); durationInput.addEventListener('input',previewEnd);
+  dateInput.value=today(); previewEnd(); syncControls();
+  // 비로그인 anon 역할을 사용합니다. 저장된 로그인 세션은 사용하지 않습니다.
+  function start() {
+    if(SUPABASE_URL==='YOUR_SUPABASE_URL' || SUPABASE_KEY==='YOUR_SUPABASE_PUBLISHABLE_KEY' || !SUPABASE_URL.trim() || !SUPABASE_KEY.trim()) {
+      $('connection').textContent='Supabase 연결 설정 필요';
+      notice('선생님, HTML 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY에 프로젝트 정보를 입력해 주세요.');
+      $('book-empty').textContent='연결 정보를 입력하면 책 목록이 나타나요.'; $('reservation-empty').textContent='연결 정보를 입력하면 예약 현황이 나타나요.'; return;
+    }
+    if(!window.supabase?.createClient) { $('connection').textContent='라이브러리 연결 실패'; notice('Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.','error'); return; }
+    // 브라우저에 비밀 키를 넣지 않도록 기본적인 검사도 합니다.
+    if(SUPABASE_KEY.startsWith('sb_secret_')) { $('connection').textContent='키 설정 오류'; notice('Secret key가 아닌 Publishable key를 사용해 주세요.','error'); return; }
+    try { db=window.supabase.createClient(SUPABASE_URL.trim(),SUPABASE_KEY.trim(),{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}); }
+    catch(error) { console.error(error); $('connection').textContent='연결 설정 오류'; notice('프로젝트 URL과 Publishable key를 확인해 주세요.','error'); return; }
+    refresh();
+  }
+  start();
+</script>
+</body>
+</html>
